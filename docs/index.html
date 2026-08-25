@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Content Refresh Prioritization with Search and Engagement Signals</title>
+<style>
+:root{--bg:#f7f8fa;--ink:#17202a;--muted:#5f6b76;--card:#fff;--line:#dfe4e8;--accent:#173b57}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}
+main{max-width:980px;margin:auto;padding:40px 22px 80px}.hero{padding:52px 0 36px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+h1{font-size:clamp(2.1rem,5vw,4rem);line-height:1.05;margin:.5rem 0 1rem;letter-spacing:-.035em}
+h2{font-size:1.65rem;margin-top:3rem;border-top:1px solid var(--line);padding-top:1.5rem}
+h3{font-size:1.1rem;margin-top:2rem}p{max-width:78ch}.lede{font-size:1.1rem;color:#33414d}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:28px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}.metric{font-size:1.8rem;font-weight:750}.label{font-size:.8rem;color:var(--muted)}
+table{width:100%;border-collapse:collapse;background:var(--card);margin:20px 0}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line)}th{font-size:.85rem}
+figure{margin:28px 0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}figure img{width:100%;height:auto}figcaption{font-size:.9rem;color:var(--muted);padding:10px 4px 2px}
+.callout{border-left:4px solid var(--accent);background:#eef3f7;padding:15px 18px;margin:20px 0}.warning{border-left-color:#8a5a00;background:#fff8e8}
+li{margin:.35rem 0}.small{font-size:.9rem;color:var(--muted)}a{color:#0b557f}
+@media(max-width:700px){.grid{grid-template-columns:1fr}main{padding-top:20px}h1{font-size:2.35rem}}
+</style>
+</head>
+<body>
+<main>
+<section class="hero">
+<div class="eyebrow">FlyRank ML Internship · Submit</div>
+<h1>Content Refresh Prioritization with Search and Engagement Signals</h1>
+<p class="lede">A leakage-aware ranking study for deciding which content pages should receive human review first.</p>
+<div class="grid">
+<div class="card"><div class="metric">78.8M</div><div class="label">daily performance rows in the warehouse release</div></div>
+<div class="card"><div class="metric">23</div><div class="label">clients in the W07 audit slice</div></div>
+<div class="card"><div class="metric">0.52</div><div class="label">validated Precision@50</div></div>
+</div>
+</section>
+
+<h2>Abstract</h2>
+<p>This study asks whether observable content and search signals can improve the prioritization of pages for human review. The work uses the pseudonymized FlyRank internship warehouse and constructs features from information available before a decision moment, with future clicks used as a directional decline target. A Random Forest ranking model was evaluated under client-grouped holdout validation, with leakage checks and explicit reason codes added before translating scores into actions. On the W07 audit slice, the grouped holdout produced ROC AUC <strong>0.7223</strong>, average precision <strong>0.5647</strong>, and Precision@50 <strong>0.5200</strong>; an earlier W05 random-split result of 0.9400 Precision@50 is treated as exploratory rather than as the headline because its split did not isolate clients. The resulting system is best interpreted as a bounded decision-support queue: it helps reviewers decide what to inspect first, but it does not prove that a page will decline or that a refresh will cause recovery.</p>
+
+<h2>1. Introduction / Problem Statement</h2>
+<p>Content teams have finite review capacity. The operational question is therefore not “which page is bad?” but <strong>which page should a human inspect first?</strong> A useful ranking must favor candidates with enough evidence to matter while avoiding low-volume noise, seasonal movement, SERP-driven click loss, and other explanations that a simple score cannot distinguish.</p>
+<p>The project uses Lane 2, Refresh / Content Opportunity Scoring. The intended user is a content strategist, SEO analyst, or editor who needs a bounded review queue for refresh, expansion, protection, or monitoring. A false positive consumes scarce review capacity; a false negative can leave a potentially important decline unexamined.</p>
+<div class="callout"><strong>Research question:</strong> Can a leakage-aware learned ranking improve the ordering of pages for human review compared with a simple prioritization rule?</div>
+
+<h2>2. Data</h2>
+<p>The analysis uses the fixed warehouse release <code>flyrank_pseudonymized_warehouse_release_v20260703</code>. The release contains 104 pseudonymized clients, 519,606 content records, 78,835,655 daily content-performance rows, and 2,414,248 client-content-query-hash rows.</p>
+<table>
+<tr><th>Table</th><th>Rows</th><th>Grain</th><th>Use</th></tr>
+<tr><td><code>dim_clients</code></td><td>104</td><td>one pseudonymized client</td><td>grouping and history coverage</td></tr>
+<tr><td><code>dim_content</code></td><td>519,606</td><td>one pseudonymized content item</td><td>content metadata and joins</td></tr>
+<tr><td><code>fact_content_daily_performance</code></td><td>78,835,655</td><td>client × content × day</td><td>historical features and future outcomes</td></tr>
+<tr><td><code>fact_content_query_90d</code></td><td>2,414,248</td><td>client × content × query hash</td><td>query-mix features where appropriate</td></tr>
+</table>
+<p>W05 uses a March 2026 slice with the March partition directly targeted. W07 uses February and March partitions to construct a leakage-safe historical window and future seven-day target, with decision dates from <strong>2026-03-01 through 2026-03-24</strong>. Rows require both GSC and GA4 data availability flags to be true where integrated performance is used.</p>
+<p>Excluded from the public paper are client names, domains, raw URLs, private queries, titles or text, credentials, and internal product decision outputs such as health or priority fields. Product decision outputs are excluded because using them as ordinary features would risk circularity.</p>
+
+<h2>3. Methodology</h2>
+<h3>Task framing</h3>
+<p>The task is ranking/scoring. The model produces a probability-like decline score, and the operational output is an ordered queue. The primary decision metric is <strong>Precision@50</strong> because the intended workflow has finite reviewer capacity.</p>
+<h3>Features</h3>
+<p>The W07 validated model uses <code>word_count</code>, <code>search_volume</code>, <code>competition</code>, <code>cpc</code>, historical seven-day average clicks, and historical seven-day summed engagement. Historical features are calculated from the period before the decision moment.</p>
+<h3>Label</h3>
+<p>The validated W07 target is a directional seven-day decline proxy:</p>
+<div class="callout"><code>future 7-day clicks &lt; prior 7-day average clicks × 7</code></div>
+<p>This is deliberately described as a proxy. It is not a business-value target, a recovery label, or evidence that a refresh would work.</p>
+<h3>Baseline and model</h3>
+<p>Earlier work established transparent refresh-priority rules using demand, freshness, position opportunity, and content context. The starter model comparison reported baseline and learned rankings on a 30,000-row slice. For the final audit, Random Forest was selected because it can represent non-linear interactions and provides a ranking score without requiring a brittle hand-written decision tree.</p>
+<h3>Validation</h3>
+<p>W07 uses <strong>GroupShuffleSplit</strong> by <code>client_hash_id</code>, with 30% of clients held out and random state 42. The validated holdout contains 7 clients and 1,135 rows. This is more conservative than the W05 random row split because the model is tested on clients it did not see during training.</p>
+<h3>Leakage checks</h3>
+<p>The project explicitly separates historical features from future targets. A Week-3 synthetic leakage experiment showed <strong>R² 0.7285</strong> with an intentionally leaked same-day signal versus <strong>0.6585</strong> after removing it, demonstrating how easily apparent performance can be inflated. The final workflow also excludes upstream product decision outputs from the feature matrix.</p>
+
+<h2>4. Results</h2>
+<div class="grid">
+<div class="card"><div class="metric">0.7223</div><div class="label">ROC AUC · W07 grouped holdout</div></div>
+<div class="card"><div class="metric">0.5647</div><div class="label">Average Precision · W07 grouped holdout</div></div>
+<div class="card"><div class="metric">0.5200</div><div class="label">Precision@50 · W07 grouped holdout</div></div>
+</div>
+<table>
+<tr><th>Evaluation</th><th>Split</th><th>Precision@50</th><th>Status</th></tr>
+<tr><td>Random Forest</td><td>W05 stratified row split</td><td>0.9400</td><td>Exploratory; not client-isolated</td></tr>
+<tr><td>Random baseline</td><td>W05 stratified row split</td><td>0.4562</td><td>Exploratory comparison</td></tr>
+<tr><td>Random Forest</td><td>W07 client-group holdout</td><td>0.5200</td><td><strong>Final validation result</strong></td></tr>
+</table>
+<figure><img src="../work/figures/precision_comparison.png" alt="Precision at 50 comparison across exploratory and grouped validation results"><figcaption>The W05 0.9400 result is intentionally shown as exploratory. It is not used to claim production-like superiority because its rows were split without client isolation. The W07 grouped result is the more conservative validation estimate.</figcaption></figure>
+<div class="callout warning"><strong>Baseline caveat:</strong> The submitted W07 notebook did not recompute the Week-4 operational baseline on exactly the same seven-client holdout. Therefore this paper does <strong>not</strong> claim that the W07 0.5200 result beats the Week-4 baseline on the same split. The W05 baseline comparison is reported for traceability, not as a substitute for the required same-split comparison.</div>
+<p>The W07 action queue contains 1,135 holdout rows. Its action mapping assigns 465 rows to “Refresh assessment,” 240 to “Senior review first,” 233 to “Monitor / validate demand,” 159 to “Refresh + expansion assessment,” and 38 to “Expansion assessment.”</p>
+<figure><img src="../work/figures/action_mix.png" alt="Suggested action mix in the validated queue"><figcaption>The queue is intentionally translated into review actions rather than exposing model scores alone.</figcaption></figure>
+
+<h2>5. Limitations & Honest Framing</h2>
+<ul>
+<li>The seven-day decline target is a proxy for future click movement, not a measure of business value or causal recovery.</li>
+<li>The W07 holdout is limited to 7 unseen clients and 1,135 rows; it is evidence about this audit slice, not a production guarantee.</li>
+<li>The W05 0.9400 Precision@50 result came from a row-level split and is therefore vulnerable to entity overlap; it is not the final validation claim.</li>
+<li>The final W07 notebook does not contain a recomputed Week-4 operational baseline on the identical grouped holdout, so model-vs-baseline superiority on that split remains unestablished.</li>
+<li>Low CTR can reflect SERP or AI-feature click loss rather than content weakness. Decline can also reflect consolidation, seasonality, or noise.</li>
+<li>Content length thresholds are review heuristics, not universal requirements. Longer content can correlate with visibility without implying that every topic should be expanded.</li>
+<li>The analysis is observational. It does not prove Google ranking factors, prove that a refresh causes recovery, or establish revenue lift.</li>
+</ul>
+<div class="callout"><strong>Safe claim:</strong> The validated model produced a measurable ranking signal for this audit slice and can support human review prioritization. It should not be treated as an autonomous optimizer.</div>
+
+<h2>6. Ranked Recommendations</h2>
+<ol>
+<li><strong>Prioritize high-confidence, high-value candidates for senior review.</strong> Use high decline score plus the historical click × CPC proxy as prioritization context, not as booked revenue. <em>Reason codes:</em> HIGH_DECLINE_SCORE, HIGH_VALUE_AT_RISK.</li>
+<li><strong>Review aging visible pages before treating age as a reason to rewrite.</strong> Pages at least 180 days old with meaningful historical clicks should be checked for freshness and continued intent fit. <em>Reason code:</em> AGING_VISIBLE.</li>
+<li><strong>Assess thin visible pages for useful expansion, not word-count padding.</strong> A low word count should trigger a missing-subtopic review rather than an automatic rewrite. <em>Reason code:</em> THIN_VISIBLE.</li>
+<li><strong>Separate low-evidence candidates into monitoring.</strong> Pages with weak historical click evidence should not consume the same editorial capacity as well-supported candidates. <em>Reason code:</em> LOW_EVIDENCE.</li>
+<li><strong>Screen for competing explanations before editing.</strong> Check consolidation, seasonality, SERP/AI click loss, and noise before treating a decline score as a content problem.</li>
+</ol>
+<p>These recommendations are intentionally human-in-the-loop. Publishing, deleting, rewriting, merging, or pruning content remains outside the automated decision boundary.</p>
+
+<h2>7. Reproducibility</h2>
+<p>The project is organized as a sequence of research artifacts:</p>
+<ul>
+<li><code><a href="https://github.com/franciskendrick/flyrank-ml-internship-starter/blob/main/work/notebooks/w01_research_question.ipynb">work/notebooks/w01_research_question.ipynb</a></code> — lane, decision, and research question</li>
+<li><code><a href="https://github.com/franciskendrick/flyrank-ml-internship-starter/blob/main/work/notebooks/w02_ml_task_framing.ipynb">work/notebooks/w02_ml_task_framing.ipynb</a></code> — ranking/scoring framing, target, metric</li>
+<li><code><a href="https://github.com/franciskendrick/flyrank-ml-internship-starter/blob/main/work/notebooks/w03_data_contract.ipynb">work/notebooks/w03_data_contract.ipynb</a></code> — schema, temporal wall, leakage experiment</li>
+<li><code><a href="https://github.com/franciskendrick/flyrank-ml-internship-starter/blob/main/work/notebooks/w04_baseline_score.ipynb">work/notebooks/w04_baseline_score.ipynb</a></code> — baseline queue and failure-mode audit</li>
+<li><code><a href="https://github.com/franciskendrick/flyrank-ml-internship-starter/blob/main/work/notebooks/w05_model.ipynb">work/notebooks/w05_model.ipynb</a></code> — model selection and initial comparison</li>
+<li><code><a href="https://github.com/franciskendrick/flyrank-ml-internship-starter/blob/main/work/notebooks/w06_validation_audit.ipynb">work/notebooks/w06_validation_audit.ipynb</a></code> — validation and claim audit</li>
+<li><code><a href="https://github.com/franciskendrick/flyrank-ml-internship-starter/blob/main/work/notebooks/w07_action_playbook.ipynb">work/notebooks/w07_action_playbook.ipynb</a></code> — grouped validation, reason codes, actions, monitoring</li>
+<li><code><a href="https://github.com/franciskendrick/flyrank-ml-internship-starter/blob/main/work/notebooks/capstone.ipynb">work/notebooks/capstone.ipynb</a></code> — paper-aligned capstone artifact</li>
+</ul>
+<p>Warehouse experiments should use the fixed pseudonymized release and directly targeted partition globs. Authentication uses a Hugging Face secret retrieved from Colab userdata or the environment; credentials are never committed.</p>
+<p class="small">Repository URL: <a href="https://github.com/franciskendrick/flyrank-ml-internship-starter">https://github.com/franciskendrick/flyrank-ml-internship-starter</a></p>
+
+<h2>8. Acknowledgments & Data Credit</h2>
+<p>Built on the <a href="https://flyrank.ai" rel="noopener noreferrer">FlyRank ML Internship dataset</a>.</p>
+<p>The dataset is pseudonymized for the internship and this paper intentionally excludes client-identifying information, raw queries, URLs, titles/text, and credentials.</p>
+</main>
+</body>
+</html>
