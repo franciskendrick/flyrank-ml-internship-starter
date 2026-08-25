@@ -82,10 +82,10 @@ li{margin:.35rem 0}.small{font-size:.9rem;color:var(--muted)}a{color:#0b557f}
 <tr><td>Random baseline</td><td>W05 stratified row split</td><td>0.4562</td><td>Exploratory comparison</td></tr>
 <tr><td>Random Forest</td><td>W07 client-group holdout</td><td>0.5200</td><td><strong>Final validation result</strong></td></tr>
 </table>
-<figure><img src="../work/figures/precision_comparison.png" alt="Precision at 50 comparison across exploratory and grouped validation results"><figcaption>The W05 0.9400 result is intentionally shown as exploratory. It is not used to claim production-like superiority because its rows were split without client isolation. The W07 grouped result is the more conservative validation estimate.</figcaption></figure>
+<figure><img src="work/figures/precision_comparison.png" alt="Precision at 50 comparison across exploratory and grouped validation results"><figcaption>The W05 0.9400 result is intentionally shown as exploratory. It is not used to claim production-like superiority because its rows were split without client isolation. The W07 grouped result is the more conservative validation estimate.</figcaption></figure>
 <div class="callout warning"><strong>Baseline caveat:</strong> The submitted W07 notebook did not recompute the Week-4 operational baseline on exactly the same seven-client holdout. Therefore this paper does <strong>not</strong> claim that the W07 0.5200 result beats the Week-4 baseline on the same split. The W05 baseline comparison is reported for traceability, not as a substitute for the required same-split comparison.</div>
 <p>The W07 action queue contains 1,135 holdout rows. Its action mapping assigns 465 rows to “Refresh assessment,” 240 to “Senior review first,” 233 to “Monitor / validate demand,” 159 to “Refresh + expansion assessment,” and 38 to “Expansion assessment.”</p>
-<figure><img src="../work/figures/action_mix.png" alt="Suggested action mix in the validated queue"><figcaption>The queue is intentionally translated into review actions rather than exposing model scores alone.</figcaption></figure>
+<figure><img src="work/figures/action_mix.png" alt="Suggested action mix in the validated queue"><figcaption>The queue is intentionally translated into review actions rather than exposing model scores alone.</figcaption></figure>
 
 <h2>5. Limitations & Honest Framing</h2>
 <ul>
